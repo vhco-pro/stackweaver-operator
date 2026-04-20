@@ -107,23 +107,27 @@ spec:
       env:
         - name: RUNNER_MODE
           value: "agent"
-        - name: STACKWEAVER_URL
+        - name: STACKWEAVER_SERVER
           value: {spec.serverUrl}
         - name: STACKWEAVER_TOKEN
           valueFrom:
             secretKeyRef:
               name: {spec.tokenSecretRef.name}
               key: {spec.tokenSecretRef.key}
-        - name: AGENT_POOL_ID
+        - name: RUNNER_AGENT_POOL_ID
           value: {spec.agentPoolId}
-        - name: RUNNER_TYPE
-          value: {spec.runnerType}
+        - name: RUNNER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name    # Pod name → unique runner identity
         - name: RUNNER_LABELS
           value: {comma-separated spec.labels}
-        - name: MAX_CONCURRENT_JOBS
-          value: {spec.jobsPerRunner}
-        - name: RUNNER_EPHEMERAL
-          value: {spec.ephemeral}
+        - name: POLL_INTERVAL
+          value: "10s"
+        # RUNNER_TYPE is not an env var — type is inferred from installed tool
+        # versions at registration. spec.runnerType controls which image is used.
+        # MAX_CONCURRENT_JOBS is not currently read from env — runner hardcodes 1.
+        # RUNNER_EPHEMERAL — added in Phase 3.
         # Additional env from spec.template.spec.env
       resources: {spec.template.spec.resources or defaults}
       volumeMounts: {spec.template.spec.volumeMounts}
@@ -132,15 +136,13 @@ spec:
           exec:
             command: ["/bin/sh", "-c", "touch /tmp/drain && sleep 5"]
       livenessProbe:
-        httpGet:
-          path: /healthz
-          port: 8081
+        exec:
+          command: ["pgrep", "-x", "runner"]
         initialDelaySeconds: 15
         periodSeconds: 20
       readinessProbe:
-        httpGet:
-          path: /readyz
-          port: 8081
+        exec:
+          command: ["pgrep", "-x", "runner"]
         initialDelaySeconds: 5
         periodSeconds: 10
   serviceAccountName: {pool.name}-runner (or spec.template.spec.serviceAccountName if no cloudIdentity)
@@ -261,7 +263,7 @@ The Runner controller reconciles on:
 
 1. Set condition `PodReady=True`
 2. Set `status.phase = Registering`
-3. Poll the Stackweaver API (`GET /api/v2/agent-pools/{id}/runners`) and find the runner by matching `attributes.name` against the pod name
+3. Poll the Stackweaver API (`GET /api/v2/agent-pools/{id}/agents`) and find the runner by matching `attributes.name` against the pod name
 4. Once registered:
    - Set `status.runnerId` to the API-assigned UUID
    - Set `status.phase = Idle`
@@ -321,7 +323,7 @@ Note: Heartbeat data comes from the Stackweaver API (the runner sends heartbeats
 The Runner controller polls the Stackweaver API to sync runner state. To avoid excessive API calls:
 
 - Poll interval: 15 seconds per runner (staggered across runners in a pool)
-- Batch endpoint preferred if available: `GET /api/v2/agent-pools/{id}/runners` returns all runners in one call
+- Batch endpoint: `GET /api/v2/agent-pools/{id}/agents` returns all runners in one call (TFE-compatible, returns name + status + last-ping-at)
 - Cache API responses for 10 seconds
 - On API errors, use exponential backoff (15s → 30s → 60s → 2m cap)
 - Circuit breaker: after 5 consecutive failures, stop polling for 5 minutes, set condition `APIReachable=False` on RunnerPool

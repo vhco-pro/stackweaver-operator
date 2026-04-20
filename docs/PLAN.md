@@ -270,7 +270,7 @@ Pod Lifecycle (per runner pod):
 
 ### Phase 5: Advanced Features
 
-- **Runner groups**: Multiple `RunnerPool` resources with different configs (GPU nodes, high-memory, ARM, etc.).
+- **Multiple runner pools**: Multiple `RunnerPool` resources with different configs (GPU nodes, high-memory, ARM, etc.), each targeting a different Stackweaver agent pool.
 - **Webhook-driven scaling** (optional): Instead of polling, Stackweaver API sends webhooks on job creation for faster scale-up via KEDA HTTP scaler.
 - **Multi-cloud identity per pool**: Support multiple cloud identity bindings on a single `RunnerPool` for runners that provision across clouds in a single job.
 
@@ -400,7 +400,7 @@ Users can use either or both. Cloud pod identity is simpler (no OIDC federation 
 | Job assignment | GitHub assigns to runner | Runner polls for jobs (pull-based) |
 | Scale-to-zero | Supported | Supported |
 | Runner image | GitHub-provided or custom | Stackweaver runner images (same as platform-hosted) |
-| Multi-tenant | Runner groups per repo/org | Agent pools per org, scoped to workspaces/projects |
+| Multi-tenant | Runner groups per repo/org | Agent pools per org, scoped to workspaces/projects via RunnerPool CRs |
 
 ## Repository Structure
 

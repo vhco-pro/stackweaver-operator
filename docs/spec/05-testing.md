@@ -46,7 +46,7 @@ func TestBuildPodTemplate_AWSCloudIdentity(t *testing.T) {
     pool := &v1alpha1.RunnerPool{
         Spec: v1alpha1.RunnerPoolSpec{
             ServerURL:   "https://stackweaver.example.com",
-            AgentPoolID: "apool-123",
+            AgentPoolID: "550e8400-e29b-41d4-a716-446655440000",
             RunnerType:  v1alpha1.RunnerTypeTerraform,
             CloudIdentity: &v1alpha1.CloudIdentityConfig{
                 Provider: v1alpha1.CloudProviderAWS,
@@ -67,7 +67,7 @@ func TestBuildPodTemplate_AWSCloudIdentity(t *testing.T) {
     // Assert env vars
     envMap := envToMap(template.Spec.Containers[0].Env)
     assert.Equal(t, "agent", envMap["RUNNER_MODE"])
-    assert.Equal(t, "terraform", envMap["RUNNER_TYPE"])
+    assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", envMap["RUNNER_AGENT_POOL_ID"])
 }
 ```
 

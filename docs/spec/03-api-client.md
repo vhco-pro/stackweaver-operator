@@ -18,17 +18,17 @@ The API key must have the `runner:register` scope (same scope used by self-hoste
 
 | Endpoint | Method | Used By | Purpose |
 |----------|--------|---------|---------|
-| `/api/v2/agent-pools/{id}/queue-depth` | GET | Scaler, fallback scaler | Get pending job count for scaling decisions |
-| `/api/v2/agent-pools/{id}/runners` | GET | Runner controller | List all runners in pool (batch status sync + registration discovery) |
-| `/api/v2/runners/{id}` | GET | Runner controller | Get individual runner status (heartbeat, jobs). Returns 404 if deregistered. |
+| `/api/v2/agent-pools/{id}/queue-depth` | GET | Scaler, fallback scaler | Get pending job count for scaling decisions (new endpoint, Phase 2) |
+| `/api/v2/agent-pools/{id}/agents` | GET | Runner controller | List runners in pool — TFE-compatible, returns name, status, last-ping-at |
+| `/api/v2/runners/{id}` | GET | Runner controller | Get individual runner detail (current-jobs, heartbeat, labels). Returns status=offline after deregistration. |
 | `/api/v2/runner/register` | POST | (runner agent, not operator) | Runner self-registration — operator doesn't call this |
 | `/api/v2/runner/heartbeat` | POST | (runner agent, not operator) | Runner heartbeat — operator doesn't call this |
 
 Note: The operator does **not** register or deregister runners. The runner agent binary inside each pod handles its own registration and heartbeat lifecycle. The operator only reads runner state for status reporting.
 
-**Registration discovery**: The Runner controller finds newly registered runners by calling `GET /api/v2/agent-pools/{id}/runners` and matching `attributes.name` against known pod names. This is preferred over a filtered endpoint since the batch call is already needed for status sync, avoiding extra API calls.
+**Registration discovery**: The Runner controller finds newly registered runners by calling `GET /api/v2/agent-pools/{id}/agents` and matching `attributes.name` against known pod names. This endpoint returns all runners in a pool in one call.
 
-**Deregistration verification**: During finalizer cleanup, the controller polls `GET /api/v2/runners/{id}` for each known runner. A 404 response indicates the runner has successfully deregistered. The controller waits until all runners return 404 or the 5-minute timeout expires.
+**Deregistration verification**: During finalizer cleanup, the controller polls `GET /api/v2/runners/{id}` for each known runner. A `status=offline` response indicates the runner has successfully deregistered (the platform's deregister endpoint marks runners offline, it does not delete them). The controller waits until all runners report `offline` or the 5-minute timeout expires.
 
 ### Queue Depth (Scaler)
 
@@ -55,38 +55,29 @@ Response 401: { "errors": [{ "status": "401", "title": "Unauthorized" }] }
 Response 404: { "errors": [{ "status": "404", "title": "Agent pool not found" }] }
 ```
 
-### List Runners (Runner Controller)
+### List Agents in Pool (Runner Controller — batch sync)
 
 ```
-GET /api/v2/agent-pools/{agentPoolId}/runners?page[size]=100
+GET /api/v2/agent-pools/{agentPoolId}/agents
 
 Response 200:
 {
   "data": [
     {
-      "type": "runners",
+      "type": "agents",
       "id": "{runner-uuid}",
       "attributes": {
         "name": "terraform-runners-abc123",
         "status": "online",
-        "runner-type": "terraform",
-        "current-jobs": 0,
-        "last-heartbeat-at": "2026-04-20T12:00:00Z"
+        "ip-address": "10.0.0.5",
+        "last-ping-at": "2026-04-20T12:00:00Z"
       }
     }
-  ],
-  "meta": {
-    "pagination": {
-      "current-page": 1,
-      "page-size": 100,
-      "total-count": 5,
-      "total-pages": 1
-    }
-  }
+  ]
 }
 ```
 
-The client must handle pagination: if `total-pages > 1`, fetch subsequent pages. In practice, a single pool rarely exceeds 100 runners, but the client must not silently truncate.
+This is a TFE-compatible endpoint. It returns a simplified view (no `current-jobs` or `labels`). For full runner detail, use `GET /api/v2/runners/{id}` per runner.
 
 ### Get Runner (Runner Controller)
 
