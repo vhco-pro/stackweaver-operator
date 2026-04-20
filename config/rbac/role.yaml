@@ -1,0 +1,35 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - runner.stackweaver.io
+  resources:
+  - runnerpools
+  - runners
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - runner.stackweaver.io
+  resources:
+  - runnerpools/finalizers
+  - runners/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - runner.stackweaver.io
+  resources:
+  - runnerpools/status
+  - runners/status
+  verbs:
+  - get
+  - patch
+  - update

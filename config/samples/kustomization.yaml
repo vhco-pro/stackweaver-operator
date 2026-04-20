@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- runner_v1alpha1_runnerpool.yaml
+- runner_v1alpha1_runner.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

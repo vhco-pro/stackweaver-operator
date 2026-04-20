@@ -1,0 +1,58 @@
+apiVersion: runner.stackweaver.io/v1alpha1
+kind: RunnerPool
+metadata:
+  labels:
+    app.kubernetes.io/name: stackweaver-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: terraform-runners
+  namespace: stackweaver
+spec:
+  # Connection to Stackweaver API
+  serverUrl: https://stackweaver.example.com
+  tokenSecretRef:
+    name: stackweaver-runner-token
+    key: token
+  agentPoolId: "apool-xxxxxxxx"
+
+  # Runner configuration
+  runnerType: terraform
+  runnerImage: ghcr.io/michielvha/stackweaver/runner:latest
+  labels:
+    - aws
+    - us-east-1
+
+  # Scaling
+  minReplicas: 0
+  maxReplicas: 10
+  scaleDownDelaySeconds: 300
+  jobsPerRunner: 1
+  ephemeral: false
+
+  # Cloud pod identity (AWS IRSA example)
+  cloudIdentity:
+    provider: aws
+    aws:
+      roleArn: arn:aws:iam::123456789012:role/stackweaver-runner
+
+  # Graceful shutdown — allow up to 1 hour for long Terraform applies
+  terminationGracePeriodSeconds: 3600
+
+  # Pod template overrides
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+    spec:
+      nodeSelector:
+        workload: runners
+      tolerations:
+        - key: dedicated
+          value: runners
+          effect: NoSchedule
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+        limits:
+          cpu: "2"
+          memory: "2Gi"

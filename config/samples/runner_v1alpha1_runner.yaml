@@ -1,0 +1,12 @@
+apiVersion: runner.stackweaver.io/v1alpha1
+kind: Runner
+metadata:
+  labels:
+    app.kubernetes.io/name: stackweaver-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: terraform-runners-abc123
+  namespace: stackweaver
+  # Runner CRs are managed by the RunnerPool controller.
+  # This sample is for reference only — do not create Runner resources directly.
+spec:
+  poolRef: terraform-runners
