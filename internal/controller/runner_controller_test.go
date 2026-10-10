@@ -25,8 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	runnerv1alpha1 "github.com/vhco-pro/stackweaver-operator/api/v1alpha1"
 )
 
@@ -38,7 +36,7 @@ var _ = Describe("Runner Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: testNamespace, // TODO(user):Modify as needed
 		}
 		runner := &runnerv1alpha1.Runner{}
 
@@ -47,11 +45,9 @@ var _ = Describe("Runner Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, runner)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &runnerv1alpha1.Runner{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+					Name:      resourceName,
+					Namespace: testNamespace,
+					Spec:      runnerv1alpha1.RunnerSpec{PoolRef: "test-pool"},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

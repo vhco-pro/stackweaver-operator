@@ -48,6 +48,9 @@ var (
 	k8sClient client.Client
 )
 
+// testNamespace is the namespace the controller specs create their resources in.
+const testNamespace = "default"
+
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 
